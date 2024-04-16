@@ -1,4 +1,4 @@
-import numpy as np
+import streamlit as st
 import pandas as pd
 import math
 
@@ -87,19 +87,26 @@ def classify(tree, sample):
     else:
         return classify(tree.false_branch, sample)
 
-# Example usage
-if __name__ == "__main__":
+def main():
+    st.title("ID3 Decision Tree with Streamlit")
+
     # Example dataset
     data = pd.DataFrame({
         'feature1': [1, 1, 0, 0, 1, 1, 0, 0],
         'feature2': [1, 1, 1, 0, 0, 1, 1, 0],
         'label': ['A', 'A', 'B', 'B', 'A', 'B', 'A', 'B']
     })
-    
+
+    st.write("Preview of the dataset:")
+    st.dataframe(data)
+
     # Build the decision tree
     tree = build_tree(data, ['feature1', 'feature2'])
-    
+
     # Classify a sample
     sample = {'feature1': 0, 'feature2': 1}
     prediction = classify(tree, sample)
-    print("Prediction:", prediction)
+    st.write("Prediction:", prediction)
+
+if __name__ == "__main__":
+    main()
