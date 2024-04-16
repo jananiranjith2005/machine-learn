@@ -1,60 +1,76 @@
+import streamlit as st
 import numpy as np
 
 class CandidateElimination:
-    def _init_(self, num_features):
+    def __init__(self, num_features):
         self.num_features = num_features
-        self.specific_h = np.array([[None] * num_features])
-        self.general_h = np.array([['?' for _ in range(num_features)]])
-        
-    def fit(self, X, y):
-        for i, x in enumerate(X):
-            if y[i] == 1:  # Positive example
-                self.specific_h = self._generalize_specific_h(x)
-                self.general_h = self._remove_inconsistent_general_h(x)
-            else:  # Negative example
-                self.general_h = np.vstack((self.general_h, self._specialize_general_h(x)))
+        self.S = [np.array(['0'] * num_features)]  # Initialize specific boundary
+        self.G = [np.array(['?'] * num_features)]  # Initialize general boundary
 
-    def _generalize_specific_h(self, x):
-        for i in range(len(self.specific_h[0])):
-            if self.specific_h[0][i] is None or self.specific_h[0][i] == x[i]:
-                continue
-            else:
-                self.specific_h[0][i] = '?'
-        return self.specific_h
-
-    def _remove_inconsistent_general_h(self, x):
-        consistent_general_h = []
-        for g in self.general_h:
-            if all(g[i] == '?' or g[i] == x[i] for i in range(len(g))):
-                consistent_general_h.append(g)
-        return np.array(consistent_general_h)
-
-    def _specialize_general_h(self, x):
-        possible_h = []
-        for g in self.general_h:
+    def generalize(self, instance):
+        new_G = []
+        for g in self.G:
             new_g = np.copy(g)
-            for i in range(len(x)):
+            for i in range(self.num_features):
                 if g[i] == '?':
-                    new_g[i] = x[i]
-            possible_h.append(new_g)
-        return possible_h
+                    new_g[i] = instance[i]
+                elif g[i] != instance[i]:
+                    new_g[i] = '?'
+            new_G.append(new_g)
+        return new_G
 
-# Get user input for the number of features
-num_features = int(input("Enter the number of features: "))
-# Initialize the CandidateElimination object
-ce = CandidateElimination(num_features)
+    def specialize(self, instance):
+        new_S = []
+        for s in self.S:
+            if np.array_equal(s, instance):
+                continue
+            for i in range(self.num_features):
+                if s[i] == '0' and instance[i] != '0':
+                    new_s = np.copy(s)
+                    new_s[i] = '?'
+                    new_S.append(new_s)
+        return new_S
 
-# Get user input for training data X and labels y
-X = []
-y = []
-num_examples = int(input("Enter the number of training examples: "))
-print("Enter training examples (each example as a row with binary features, followed by the label):")
-for _ in range(num_examples):
-    example = list(map(int, input().split()))
-    X.append(example[:-1])
-    y.append(example[-1])
-X = np.array(X)
-y = np.array(y)
+    def update_boundary_sets(self, instance, target):
+        if target == 'Y':
+            self.S = [s for s in self.S if np.array_equal(s, instance)]
+            self.G = self.generalize(instance)
+        elif target == 'N':
+            self.G = [g for g in self.G if not self.consistent_with(g, instance)]
+            self.S = self.specialize(instance)
 
-# Fit the model
-ce.fit(X, y)
+    def consistent_with(self, hypothesis, instance):
+        for i in range(self.num_features):
+            if hypothesis[i] != '?' and hypothesis[i] != instance[i]:
+                return False
+        return True
+
+def main():
+    st.title("Candidate Elimination Algorithm with Streamlit")
+
+    num_features = st.number_input("Number of features:", min_value=1, step=1, value=2)
+
+    # Initialize the CandidateElimination algorithm
+    ce = CandidateElimination(num_features)
+
+    st.write("Initial specific boundary (S):")
+    st.write(ce.S)
+    st.write("Initial general boundary (G):")
+    st.write(ce.G)
+
+    st.header("Update Hypotheses")
+
+    instance = st.text_input("Instance (comma-separated values):")
+    instance = instance.split(',') if instance else None
+
+    if instance and len(instance) == num_features:
+        target = st.radio("Target (Y/N):", ('Y', 'N'))
+        if st.button("Update Hypotheses"):
+            ce.update_boundary_sets(np.array(instance), target)
+            st.write("Updated specific boundary (S):")
+            st.write(ce.S)
+            st.write("Updated general boundary (G):")
+            st.write(ce.G)
+
+if __name__ == "__main__":
+    main()
