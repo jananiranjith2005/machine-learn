@@ -1,49 +1,105 @@
+import numpy as np
 import pandas as pd
-import streamlit as st
-from sklearn.tree import DecisionTreeClassifier, plot_tree
-import matplotlib.pyplot as plt
 import math
 
-def calculate_entropy(data, target_column):
-    total_rows = len(data)
-    target_values = data[target_column].unique()
+class Node:
+    def __init__(self, feature=None, value=None, results=None, true_branch=None, false_branch=None):
+        self.feature = feature          # Feature index
+        self.value = value              # Threshold value if the feature is numeric
+        self.results = results          # Results for leaf node (class probabilities)
+        self.true_branch = true_branch  # True branch (greater or equal)
+        self.false_branch = false_branch # False branch (less than)
 
+def calculate_entropy(data):
+    # Calculate entropy of a dataset
+    total_count = len(data)
+    label_counts = data['label'].value_counts()
     entropy = 0
-    for value in target_values:
-        # Calculate the proportion of instances with the current value
-        value_count = len(data[data[target_column] == value])
-        proportion = value_count / total_rows
-        entropy -= proportion * math.log2(proportion)
-
+    for label in label_counts:
+        p = label / total_count
+        entropy -= p * math.log2(p)
     return entropy
 
-def main():
-    st.title("Decision Tree Visualization")
+def calculate_information_gain(data, feature, value):
+    # Calculate information gain for a specific feature and value
+    true_data = data[data[feature] >= value]
+    false_data = data[data[feature] < value]
+    
+    # Calculate entropy for the true and false branches
+    entropy_true = calculate_entropy(true_data)
+    entropy_false = calculate_entropy(false_data)
+    
+    # Calculate total entropy after the split
+    p_true = len(true_data) / len(data)
+    p_false = len(false_data) / len(data)
+    total_entropy = p_true * entropy_true + p_false * entropy_false
+    
+    # Calculate information gain
+    parent_entropy = calculate_entropy(data)
+    information_gain = parent_entropy - total_entropy
+    
+    return information_gain
 
-    # Load data
-    df = pd.read_csv('diabetes.csv')
+def get_best_split(data, features):
+    # Find the best split for the dataset
+    best_gain = 0
+    best_feature = None
+    best_value = None
+    
+    for feature in features:
+        values = data[feature].unique()
+        for value in values:
+            gain = calculate_information_gain(data, feature, value)
+            if gain > best_gain:
+                best_gain = gain
+                best_feature = feature
+                best_value = value
+    
+    return best_feature, best_value
 
-    st.write("Preview of the dataset:")
-    st.dataframe(df.head())
+def build_tree(data, features):
+    # Recursive function to build the decision tree
+    if len(data['label'].unique()) == 1: # If only one class in the data, return a leaf node
+        return Node(results=data['label'].value_counts(normalize=True).to_dict())
+    
+    if len(features) == 0: # If no features left to split on, return a leaf node with majority class
+        return Node(results=data['label'].value_counts(normalize=True).to_dict())
+    
+    best_feature, best_value = get_best_split(data, features)
+    if best_feature is None: # If unable to find a split, return a leaf node with majority class
+        return Node(results=data['label'].value_counts(normalize=True).to_dict())
+    
+    true_data = data[data[best_feature] >= best_value]
+    false_data = data[data[best_feature] < best_value]
+    
+    true_branch = build_tree(true_data, features)
+    false_branch = build_tree(false_data, features)
+    
+    return Node(feature=best_feature, value=best_value, true_branch=true_branch, false_branch=false_branch)
 
-    # Calculate entropy of the dataset
-    entropy_outcome = calculate_entropy(df, 'Outcome')
-    st.write(f"Entropy of the dataset: {entropy_outcome}")
+def classify(tree, sample):
+    # Classify a sample using the decision tree
+    if tree.results is not None:
+        return max(tree.results, key=tree.results.get)
+    
+    if sample[tree.feature] >= tree.value:
+        return classify(tree.true_branch, sample)
+    else:
+        return classify(tree.false_branch, sample)
 
-    # Feature selection for the first step in making decision tree
-    selected_feature = 'DiabetesPedigreeFunction'
-
-    # Create a decision tree
-    clf = DecisionTreeClassifier(criterion='entropy', max_depth=1)
-    X = df[[selected_feature]]
-    y = df['Outcome']
-    clf.fit(X, y)
-
-    # Plot the decision tree
-    st.write("Decision Tree Visualization:")
-    plt.figure(figsize=(8, 6))
-    plot_tree(clf, feature_names=[selected_feature], class_names=['0', '1'], filled=True, rounded=True)
-    st.pyplot()
-
+# Example usage
 if __name__ == "__main__":
-    main()
+    # Example dataset
+    data = pd.DataFrame({
+        'feature1': [1, 1, 0, 0, 1, 1, 0, 0],
+        'feature2': [1, 1, 1, 0, 0, 1, 1, 0],
+        'label': ['A', 'A', 'B', 'B', 'A', 'B', 'A', 'B']
+    })
+    
+    # Build the decision tree
+    tree = build_tree(data, ['feature1', 'feature2'])
+    
+    # Classify a sample
+    sample = {'feature1': 0, 'feature2': 1}
+    prediction = classify(tree, sample)
+    print("Prediction:", prediction)
