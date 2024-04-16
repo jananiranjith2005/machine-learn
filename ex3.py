@@ -1,3 +1,4 @@
+import streamlit as st
 import numpy as np
 
 class NeuralNetwork():
@@ -40,34 +41,29 @@ class NeuralNetwork():
         output = self.sigmoid(np.dot(inputs, self.synaptic_weights))
         return output
 
+def main():
+    st.title("Neural Network Streamlit App")
 
-if __name__ == "__main__":
+    st.write("This app demonstrates a simple neural network trained on the XOR dataset.")
 
-    #initializing the neuron class
+    # Initializing the neural network
     neural_network = NeuralNetwork()
 
-    print("Beginning Randomly Generated Weights: ")
-    print(neural_network.synaptic_weights)
+    # Training data consisting of 4 examples--3 input values and 1 output
+    training_inputs = np.array([[0, 0, 1], [1, 1, 1], [1, 0, 1], [0, 1, 1]])
+    training_outputs = np.array([[0, 1, 1, 0]]).T
 
-    #training data consisting of 4 examples--3 input values and 1 output
-    training_inputs = np.array([[0,0,1],
-                                [1,1,1],
-                                [1,0,1],
-                                [0,1,1]])
-
-    training_outputs = np.array([[0,1,1,0]]).T
-
-    #training taking place
+    # Training the neural network
     neural_network.train(training_inputs, training_outputs, 15000)
 
-    print("Ending Weights After Training: ")
-    print(neural_network.synaptic_weights)
+    # Allowing user input for new predictions
+    user_input_one = st.text_input("User Input One", "0")
+    user_input_two = st.text_input("User Input Two", "0")
+    user_input_three = st.text_input("User Input Three", "0")
 
-    user_input_one = str(input("User Input One: "))
-    user_input_two = str(input("User Input Two: "))
-    user_input_three = str(input("User Input Three: "))
+    if st.button("Predict"):
+        output = neural_network.think(np.array([user_input_one, user_input_two, user_input_three]))
+        st.write("Output:", output)
 
-    print("Considering New Situation: ", user_input_one, user_input_two, user_input_three)
-    print("New Output data: ")
-    print(neural_network.think(np.array([user_input_one, user_input_two, user_input_three])))
-    print("Wow, we did it!")
+if __name__ == "__main__":
+    main()
