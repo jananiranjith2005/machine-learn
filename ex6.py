@@ -44,4 +44,5 @@ gender_map = {'Male': 0, 'Female': 1}
 family_map = {'No': 0, 'Yes': 1}
 diet_map = {'High': 0, 'Medium': 1}
 lifestyle_map = {'Athlete': 0, 'Active': 1, 'Moderate': 2, 'Sedentary': 3}
-cholesterol_map = {'High': 0, '
+cholesterol_map = {'High': 0, 'BorderLine': 1, 'Normal': 2}
+
