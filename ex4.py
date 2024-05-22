@@ -1,46 +1,89 @@
-pip install --upgrade pip
-pip install scikit-learn
-import streamlit as st
+import math
+import random
+import pandas as pd
 import numpy as np
-from sklearn.datasets import make_classification
-from sklearn.model_selection import train_test_split
-from sklearn.naive_bayes import GaussianNB
-from sklearn.metrics import accuracy_score
+def encode_class(mydata):
+	classes = []
+	for i in range(len(mydata)):
+		if mydata[i][-1] not in classes:
+			classes.append(mydata[i][-1])
+	for i in range(len(classes)):
+		for j in range(len(mydata)):
+			if mydata[j][-1] == classes[i]:
+				mydata[j][-1] = i
+	return mydata
+def splitting(mydata, ratio):
+	train_num = int(len(mydata) * ratio)
+	train = []
+	test = list(mydata)
+	while len(train) < train_num:
+		index = random.randrange(len(test))
+		train.append(test.pop(index))
+	return train, test
+def groupUnderClass(mydata):
+	data_dict = {}
+	for i in range(len(mydata)):
+		if mydata[i][-1] not in data_dict:
+			data_dict[mydata[i][-1]] = []
+		data_dict[mydata[i][-1]].append(mydata[i])
+	return data_dict
+def MeanAndStdDev(numbers):
+	avg = np.mean(numbers)
+	stddev = np.std(numbers)
+	return avg, stddev
 
-def main():
-    # Generate synthetic dataset
-    X, y = make_classification(n_samples=1000, n_features=2, n_informative=2, n_redundant=0, n_clusters_per_class=1, random_state=42)
+def MeanAndStdDevForClass(mydata):
+	info = {}
+	data_dict = groupUnderClass(mydata)
+	for classValue, instances in data_dict.items():
+		info[classValue] = [MeanAndStdDev(attribute) for attribute in zip(*instances)]
+	return info
+def calculateGaussianProbability(x, mean, stdev):
+	epsilon = 1e-10
+	expo = math.exp(-(math.pow(x - mean, 2) / (2 * math.pow(stdev + epsilon, 2))))
+	return (1 / (math.sqrt(2 * math.pi) * (stdev + epsilon))) * expo
 
-    # Split dataset into train and test sets
-    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+def calculateClassProbabilities(info, test):
+	probabilities = {}
+	for classValue, classSummaries in info.items():
+		probabilities[classValue] = 1
+		for i in range(len(classSummaries)):
+			mean, std_dev = classSummaries[i]
+			x = test[i]
+			probabilities[classValue] *= calculateGaussianProbability(x, mean, std_dev)
+	return probabilities
+def predict(info, test):
+	probabilities = calculateClassProbabilities(info, test)
+	bestLabel = max(probabilities, key=probabilities.get)
+	return bestLabel
 
-    # Train Naive Bayes classifier
-    classifier = GaussianNB()
-    classifier.fit(X_train, y_train)
+def getPredictions(info, test):
+	predictions = [predict(info, instance) for instance in test]
+	return predictions
+def accuracy_rate(test, predictions):
+	correct = sum(1 for i in range(len(test)) if test[i][-1] == predictions[i])
+	return (correct / float(len(test))) * 100.0
+# Load data using pandas
+filename = '/content/diabetes_data.csv' # Add the correct file path
+df = pd.read_csv(filename)
+mydata = df.values.tolist()
 
-    # Make predictions on the test set
-    y_pred = classifier.predict(X_test)
+# Encode classes and convert attributes to float
+mydata = encode_class(mydata)
+for i in range(len(mydata)):
+	for j in range(len(mydata[i]) - 1):
+		mydata[i][j] = float(mydata[i][j])
+# Split the data into training and testing sets
+ratio = 0.7
+train_data, test_data = splitting(mydata, ratio)
 
-    # Calculate accuracy
-    accuracy = accuracy_score(y_test, y_pred)
+print('Total number of examples:', len(mydata))
+print('Training examples:', len(train_data))
+print('Test examples:', len(test_data))
+# Train the model
+info = MeanAndStdDevForClass(train_data)
 
-    # Streamlit UI
-    st.title('Naive Bayes Classifier')
-
-    # Show accuracy
-    st.write('Accuracy:', accuracy)
-
-    # Allow user to input new data for prediction
-    st.sidebar.title('Input New Data')
-    feature1 = st.sidebar.slider('Feature 1', float(X[:, 0].min()), float(X[:, 0].max()), float(X[:, 0].mean()))
-    feature2 = st.sidebar.slider('Feature 2', float(X[:, 1].min()), float(X[:, 1].max()), float(X[:, 1].mean()))
-
-    # Make prediction on new data
-    new_data = np.array([[feature1, feature2]])
-    prediction = classifier.predict(new_data)
-
-    # Show prediction
-    st.sidebar.write('Predicted Class:', prediction[0])
-
-if __name__ == "__main__":
-    main()
+# Test the model
+predictions = getPredictions(info, test_data)
+accuracy = accuracy_rate(test_data, predictions)
+print('Accuracy of the model:', accuracy)
