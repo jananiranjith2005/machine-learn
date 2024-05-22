@@ -1,3 +1,5 @@
+pip install --upgrade pip
+pip install scikit-learn
 import streamlit as st
 import numpy as np
 from sklearn.datasets import make_classification
