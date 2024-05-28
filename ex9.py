@@ -1,6 +1,4 @@
 
-MACHINE LEARNING LAB - 10 ( Locally Weighted Regression Algorithm )
-10. Implement the non-parametric Locally Weighted Regression Algorithm in order to fit data points. Select appropriate data set for your experiment and draw graphs.
 
 from math import ceil
 import numpy as np
