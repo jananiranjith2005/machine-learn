@@ -1,8 +1,9 @@
-
-
-from math import ceil
+import streamlit as st
 import numpy as np
+import matplotlib.pyplot as plt
 from scipy import linalg
+from math import ceil, pi
+
 def lowess(x, y, f, iterations):
     n = len(x)
     r = int(ceil(f * n))
@@ -25,15 +26,30 @@ def lowess(x, y, f, iterations):
         delta = (1 - delta ** 2) ** 2
 
     return yest
-import math
-n = 100
-x = np.linspace(0, 2 * math.pi, n)
+
+# Streamlit app
+st.title("LOWESS Smoothing Example")
+
+# Number of data points
+n = st.slider("Number of data points", 10, 200, 100)
+
+# Fraction of points to use
+f = st.slider("Smoothing parameter (f)", 0.01, 1.0, 0.25)
+
+# Number of iterations
+iterations = st.slider("Number of iterations", 1, 10, 3)
+
+# Generate data
+x = np.linspace(0, 2 * pi, n)
 y = np.sin(x) + 0.3 * np.random.randn(n)
-f =0.25
-iterations=3
+
+# Apply LOWESS
 yest = lowess(x, y, f, iterations)
-    
-import matplotlib.pyplot as plt
-plt.plot(x,y,"r.")
-plt.plot(x,yest,"b-")
-[<matplotlib.lines.Line2D at 0x37459696d8>]
+
+# Plotting
+fig, ax = plt.subplots()
+ax.plot(x, y, "r.", label="Original Data")
+ax.plot(x, yest, "b-", label="LOWESS Smoothed")
+ax.legend()
+
+st.pyplot(fig)
