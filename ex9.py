@@ -1,8 +1,8 @@
 import streamlit as st
 import numpy as np
-import matplotlib.pyplot as plt
-from scipy import linalg
-from math import ceil, pi
+import plotly.graph_objs as go
+from math import ceil
+from numpy.linalg import lstsq
 
 def lowess(x, y, f, iterations):
     n = len(x)
@@ -16,8 +16,8 @@ def lowess(x, y, f, iterations):
         for i in range(n):
             weights = delta * w[:, i]
             b = np.array([np.sum(weights * y), np.sum(weights * y * x)])
-            A = np.array([[np.sum(weights), np.sum(weights * x)],[np.sum(weights * x), np.sum(weights * x * x)]])
-            beta = linalg.solve(A, b)
+            A = np.array([[np.sum(weights), np.sum(weights * x)], [np.sum(weights * x), np.sum(weights * x * x)]])
+            beta = lstsq(A, b, rcond=None)[0]
             yest[i] = beta[0] + beta[1] * x[i]
 
         residuals = y - yest
@@ -40,16 +40,20 @@ f = st.slider("Smoothing parameter (f)", 0.01, 1.0, 0.25)
 iterations = st.slider("Number of iterations", 1, 10, 3)
 
 # Generate data
-x = np.linspace(0, 2 * pi, n)
+x = np.linspace(0, 2 * np.pi, n)
 y = np.sin(x) + 0.3 * np.random.randn(n)
 
 # Apply LOWESS
 yest = lowess(x, y, f, iterations)
 
-# Plotting
-fig, ax = plt.subplots()
-ax.plot(x, y, "r.", label="Original Data")
-ax.plot(x, yest, "b-", label="LOWESS Smoothed")
-ax.legend()
+# Plotting with Plotly
+trace1 = go.Scatter(x=x, y=y, mode='markers', name='Original Data', marker=dict(color='red'))
+trace2 = go.Scatter(x=x, y=yest, mode='lines', name='LOWESS Smoothed', line=dict(color='blue'))
 
-st.pyplot(fig)
+layout = go.Layout(title='LOWESS Smoothing',
+                   xaxis=dict(title='X'),
+                   yaxis=dict(title='Y'))
+
+fig = go.Figure(data=[trace1, trace2], layout=layout)
+
+st.plotly_chart(fig)
