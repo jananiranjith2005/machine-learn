@@ -1,7 +1,7 @@
 import streamlit as st
-from sklearn.neighbors import KNeighborsClassifier
 import numpy as np
 import pandas as pd
+from collections import Counter
 
 # Manually defined Iris dataset (sample)
 data = {
@@ -33,35 +33,39 @@ target_names = ["setosa", "versicolor"]
 df = pd.DataFrame(data)
 
 # Features and target
-X = df.drop(columns=['species'])
-y = df['species']
+X = df.drop(columns=['species']).values
+y = df['species'].values
 
-# Train the KNeighborsClassifier
-kn = KNeighborsClassifier(n_neighbors=1)
-kn.fit(X, y)
+# KNN Algorithm Implementation
+def euclidean_distance(point1, point2):
+    return np.sqrt(np.sum((np.array(point1) - np.array(point2)) ** 2))
+
+def knn_predict(X_train, y_train, x_test, k=1):
+    distances = [euclidean_distance(x_test, x_train) for x_train in X_train]
+    k_indices = np.argsort(distances)[:k]
+    k_nearest_labels = [y_train[i] for i in k_indices]
+    most_common = Counter(k_nearest_labels).most_common(1)
+    return most_common[0][0]
 
 # Streamlit app
-st.title("Iris Dataset KNN Classifier")
-st.write("This app uses a K-Nearest Neighbors classifier to predict the species of iris flowers based on your input measurements.")
+st.title("Iris Dataset KNN Classifier (No Sklearn)")
+st.write("This app uses a custom K-Nearest Neighbors classifier to predict the species of iris flowers based on your input measurements.")
 
 # Inputs for the user to enter new iris flower measurements
 st.sidebar.header("Enter Iris Flower Measurements")
-sepal_length = st.sidebar.slider("Sepal Length (cm)", float(X['sepal_length'].min()), float(X['sepal_length'].max()), float(X['sepal_length'].mean()))
-sepal_width = st.sidebar.slider("Sepal Width (cm)", float(X['sepal_width'].min()), float(X['sepal_width'].max()), float(X['sepal_width'].mean()))
-petal_length = st.sidebar.slider("Petal Length (cm)", float(X['petal_length'].min()), float(X['petal_length'].max()), float(X['petal_length'].mean()))
-petal_width = st.sidebar.slider("Petal Width (cm)", float(X['petal_width'].min()), float(X['petal_width'].max()), float(X['petal_width'].mean()))
+sepal_length = st.sidebar.slider("Sepal Length (cm)", float(df['sepal_length'].min()), float(df['sepal_length'].max()), float(df['sepal_length'].mean()))
+sepal_width = st.sidebar.slider("Sepal Width (cm)", float(df['sepal_width'].min()), float(df['sepal_width'].max()), float(df['sepal_width'].mean()))
+petal_length = st.sidebar.slider("Petal Length (cm)", float(df['petal_length'].min()), float(df['petal_length'].max()), float(df['petal_length'].mean()))
+petal_width = st.sidebar.slider("Petal Width (cm)", float(df['petal_width'].min()), float(df['petal_width'].max()), float(df['petal_width'].mean()))
 
 # Collect user input into a numpy array
-input_data = np.array([[sepal_length, sepal_width, petal_length, petal_width]])
+input_data = [sepal_length, sepal_width, petal_length, petal_width]
 
-# Predict the class of the input data
-prediction = kn.predict(input_data)
-predicted_species = target_names[prediction[0]]
+# Predict the class of the input data using custom KNN
+prediction = knn_predict(X, y, input_data)
+predicted_species = target_names[prediction]
 
 st.write(f"The predicted species is: **{predicted_species}**")
-
-# Display the accuracy of the model
-st.write("Note: Model accuracy is not available because we're using a manually defined subset of data.")
 
 # Optional: Display some of the manually defined data as an example
 st.write("Example data:")
