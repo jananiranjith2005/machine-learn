@@ -1,8 +1,7 @@
 import streamlit as st
 import numpy as np
-import plotly.graph_objs as go
-from math import ceil
 from numpy.linalg import lstsq
+from math import ceil, pi
 
 def lowess(x, y, f, iterations):
     n = len(x)
@@ -40,20 +39,21 @@ f = st.slider("Smoothing parameter (f)", 0.01, 1.0, 0.25)
 iterations = st.slider("Number of iterations", 1, 10, 3)
 
 # Generate data
-x = np.linspace(0, 2 * np.pi, n)
+x = np.linspace(0, 2 * pi, n)
 y = np.sin(x) + 0.3 * np.random.randn(n)
 
 # Apply LOWESS
 yest = lowess(x, y, f, iterations)
 
-# Plotting with Plotly
-trace1 = go.Scatter(x=x, y=y, mode='markers', name='Original Data', marker=dict(color='red'))
-trace2 = go.Scatter(x=x, y=yest, mode='lines', name='LOWESS Smoothed', line=dict(color='blue'))
+# Prepare data for plotting
+original_data = {"x": x, "y": y}
+smoothed_data = {"x": x, "y": yest}
 
-layout = go.Layout(title='LOWESS Smoothing',
-                   xaxis=dict(title='X'),
-                   yaxis=dict(title='Y'))
+# Plotting with Streamlit
+st.subheader("Original Data vs. LOWESS Smoothed Data")
+st.line_chart(original_data, width=700, height=300)
+st.line_chart(smoothed_data, width=700, height=300)
 
-fig = go.Figure(data=[trace1, trace2], layout=layout)
-
-st.plotly_chart(fig)
+# Combined plot (overlay)
+combined_data = {"Original": y, "Smoothed": yest}
+st.line_chart(data=combined_data, width=700, height=300)
